@@ -1,0 +1,580 @@
+import numpy as np
+from scipy.stats import norm
+import matplotlib.pyplot as plt
+import yfinance as yf
+import pandas as pd # For rolling calculations
+
+import sys
+# print(sys.path) # You can uncomment this if you need to debug import paths
+
+# Author: Joshua Zayne
+# ==================
+# BLACK SCHOLES CALL PUT
+# ==================
+# '''
+# Calculates the theoretical price of European call and put options using the Black-Scholes-Merton model.
+# Handles edge cases such as expired options (T<=0) or zero volatility (sigma<=0),
+# returning intrinsic value or discounted intrinsic value respectively.
+#
+# Parameters:
+# S (float): Current underlying asset price.
+# K (float): Option strike price.
+# T (float): Time to expiration in years.
+# r (float): Annualized risk-free interest rate (e.g., 0.05 for 5%).
+# sigma (float): Annualized volatility of the underlying asset (e.g., 0.2 for 20%).
+#
+# Returns:
+# tuple (float, float): (call_price, put_price)
+# '''
+def black_scholes_call_put(S, K, T, r, sigma):
+    if T <= 0: # Option expired or invalid time
+        call_price = np.maximum(0, S - K)
+        put_price = np.maximum(0, K - S)
+        return call_price, put_price
+
+    if sigma <= 0: # No volatility or invalid volatility
+        # Price is discounted intrinsic value based on risk-free drift
+        call_price = np.maximum(0, S - K * np.exp(-r * T))
+        put_price = np.maximum(0, K * np.exp(-r * T) - S)
+        return call_price, put_price
+
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+
+    call_price = (S * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2))
+    put_price = (K * np.exp(-r * T) * norm.cdf(-d2) - S * norm.cdf(-d1))
+
+    return call_price, put_price
+
+# Author: Joshua Zayne
+# ==================
+# DELTA
+# ==================
+# '''
+# Calculates the Delta of an option, representing the rate of change of the option price
+# with respect to a $1 change in the underlying asset's price.
+# Handles edge cases for expired options or zero volatility.
+#
+# Parameters:
+# S (float): Current underlying asset price.
+# K (float): Option strike price.
+# T (float): Time to expiration in years.
+# r (float): Annualized risk-free interest rate.
+# sigma (float): Annualized volatility of the underlying asset.
+# option_type (str): 'call' or 'put'.
+#
+# Returns:
+# float: Option Delta.
+# '''
+def delta(S, K, T, r, sigma, option_type='call'):
+    if T <= 0:
+        if option_type == 'call':
+            return 1.0 if S > K else (0.5 if S == K else 0.0)
+        else: # put
+            return -1.0 if S < K else (-0.5 if S == K else 0.0)
+
+    if sigma <= 0:
+        k_pv = K * np.exp(-r * T)
+        if option_type == 'call':
+            return 1.0 if S >= k_pv else 0.0
+        else: # put
+            return -1.0 if S <= k_pv else 0.0
+
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    if option_type == 'call':
+        return norm.cdf(d1)
+    else: # put
+        return norm.cdf(d1) - 1
+
+# Author: Joshua Zayne
+# ==================
+# GAMMA
+# ==================
+# '''
+# Calculates the Gamma of an option, representing the rate of change of the option's Delta
+# with respect to a $1 change in the underlying asset's price.
+# Gamma is the same for calls and puts.
+# Handles edge cases for expired options or zero volatility.
+#
+# Parameters:
+# S (float): Current underlying asset price.
+# K (float): Option strike price.
+# T (float): Time to expiration in years.
+# r (float): Annualized risk-free interest rate.
+# sigma (float): Annualized volatility of the underlying asset.
+#
+# Returns:
+# float: Option Gamma.
+# '''
+def gamma(S, K, T, r, sigma):
+    if T <= 0 or sigma <= 0: return 0
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    if S <= 0: return 0 # Avoid division by zero if S is 0
+    return norm.pdf(d1) / (S * sigma * np.sqrt(T))
+
+# Author: Joshua Zayne
+# ==================
+# VEGA
+# ==================
+# '''
+# Calculates the Vega of an option, representing the rate of change of the option price
+# with respect to a 1% change in the underlying asset's volatility.
+# Vega is the same for calls and puts.
+# Handles edge cases for expired options or zero volatility.
+#
+# Parameters:
+# S (float): Current underlying asset price.
+# K (float): Option strike price.
+# T (float): Time to expiration in years.
+# r (float): Annualized risk-free interest rate.
+# sigma (float): Annualized volatility of the underlying asset.
+#
+# Returns:
+# float: Option Vega (price change per 1% change in volatility).
+# '''
+def vega(S, K, T, r, sigma):
+    if T <= 0 or sigma <= 0: return 0
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    if S <= 0: return 0 # Avoid issues if S is zero
+    return S * norm.pdf(d1) * np.sqrt(T) * 0.01 # Per 1% change in vol
+
+# Author: Joshua Zayne
+# ==================
+# THETA
+# ==================
+# '''
+# Calculates the Theta of an option, representing the rate of change of the option price
+# with respect to the passage of one day (time decay).
+# Handles edge cases for expired options or zero volatility.
+#
+# Parameters:
+# S (float): Current underlying asset price.
+# K (float): Option strike price.
+# T (float): Time to expiration in years.
+# r (float): Annualized risk-free interest rate.
+# sigma (float): Annualized volatility of the underlying asset.
+# option_type (str): 'call' or 'put'.
+#
+# Returns:
+# float: Option Theta (price change per day).
+# '''
+def theta(S, K, T, r, sigma, option_type='call'):
+    if T <= 0: return 0
+
+    if sigma <= 0:
+        k_pv = K * np.exp(-r * T)
+        theta_val_yearly = 0
+        if option_type == 'call':
+            if S >= k_pv:
+                theta_val_yearly = -r * K * np.exp(-r * T)
+        else: # put
+            if S <= k_pv:
+                theta_val_yearly = -r * K * np.exp(-r * T)
+        return theta_val_yearly / 365.0
+
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    if S <= 0: return 0
+
+    term1 = - (S * norm.pdf(d1) * sigma) / (2 * np.sqrt(T))
+    if option_type == 'call':
+        term2 = - r * K * np.exp(-r * T) * norm.cdf(d2)
+        return (term1 + term2) / 365.0
+    else: # put
+        term2 = r * K * np.exp(-r * T) * norm.cdf(-d2)
+        return (term1 + term2) / 365.0
+
+# Author: Joshua Zayne
+# ==================
+# GET STOCK DATA
+# ==================
+# '''
+# Fetches the current stock price and estimates 1-year historical volatility for a given ticker symbol
+# using the yfinance library.
+# Includes fallbacks and error handling for data retrieval.
+#
+# Parameters:
+# ticker_symbol (str): The stock ticker symbol (e.g., 'AAPL').
+#
+# Returns:
+# tuple (float, float): (current_price, annualized_volatility).
+#                       Defaults to (100.0, 0.20) if data fetching fails.
+# '''
+def get_stock_data(ticker_symbol):
+    stock = yf.Ticker(ticker_symbol)
+    current_price = None
+    volatility = 0.20 # Default volatility
+
+    try:
+        info = stock.info
+        current_price = info.get('currentPrice', info.get('regularMarketPrice'))
+        if current_price is None: current_price = info.get('regularMarketPreviousClose')
+
+        if current_price is None:
+            hist_1d = stock.history(period="1d")
+            if not hist_1d.empty and 'Close' in hist_1d.columns:
+                current_price = hist_1d['Close'].iloc[-1]
+
+        if current_price is None or np.isnan(current_price):
+            hist_5d = stock.history(period="5d")
+            if not hist_5d.empty and 'Close' in hist_5d.columns and not hist_5d['Close'].dropna().empty:
+                current_price = hist_5d['Close'].dropna().iloc[-1]
+                if current_price is not None:
+                    print(f"Using last close from 5-day history for {ticker_symbol}: {current_price:.2f}")
+            else:
+                 raise ValueError(f"Could not fetch current price for {ticker_symbol} after multiple attempts.")
+
+        hist_data_vol = stock.history(period="1y") # Use 1 year of data for volatility calculation
+        if hist_data_vol.empty or len(hist_data_vol['Close'].dropna()) < 30:
+             print(f"Warning: Insufficient historical data ({len(hist_data_vol['Close'].dropna())} days) for {ticker_symbol} to calculate volatility. Using default {volatility*100:.0f}%.")
+        else:
+            log_returns_vol = np.log(hist_data_vol['Close'] / hist_data_vol['Close'].shift(1)).dropna()
+            if len(log_returns_vol) > 1:
+                calc_volatility = log_returns_vol.std() * np.sqrt(252)
+                if np.isnan(calc_volatility) or calc_volatility <= 0: # Volatility should be positive
+                    print(f"Warning: Calculated volatility is NaN, zero or negative for {ticker_symbol}. Using default {volatility*100:.0f}%.")
+                else:
+                    volatility = calc_volatility
+            else:
+                 print(f"Warning: Not enough log returns to calculate volatility for {ticker_symbol}. Using default {volatility*100:.0f}%.")
+
+    except Exception as e:
+        print(f"Error fetching stock data for {ticker_symbol}: {e}")
+        print("Using placeholder values if price not already fetched. Please check the ticker or network.")
+        if current_price is None: current_price = 100.0
+
+    if current_price is None:
+        print("CRITICAL: current_price is None. Defaulting to 100.")
+        current_price = 100.0
+
+    return float(current_price), float(volatility)
+
+# Author: Joshua Zayne
+# ==================
+# GET RISK FREE RATE
+# ==================
+# '''
+# Fetches the current 10-Year Treasury Yield (^TNX) as a proxy for the risk-free rate
+# using the yfinance library.
+# Includes fallbacks and error handling.
+#
+# Returns:
+# float: Annualized risk-free rate as a decimal (e.g., 0.03 for 3%).
+#        Defaults to 0.03 if fetching fails.
+# '''
+def get_risk_free_rate():
+    r_decimal = 0.03
+    try:
+        tnx = yf.Ticker("^TNX")
+        r_info = tnx.info
+        r_percentage = r_info.get('currentPrice', r_info.get('regularMarketPrice'))
+        if r_percentage is None: r_percentage = r_info.get('regularMarketPreviousClose')
+
+        if r_percentage is None:
+            hist_1d_tnx = tnx.history(period="1d")
+            if not hist_1d_tnx.empty and 'Close' in hist_1d_tnx.columns:
+                r_percentage = hist_1d_tnx['Close'].iloc[-1]
+
+        if r_percentage is not None and not np.isnan(r_percentage):
+            r_decimal = r_percentage / 100.0
+        else:
+            print(f"Warning: Could not fetch risk-free rate (^TNX). Using default {r_decimal*100:.2f}%.")
+    except Exception as e:
+        print(f"Error fetching risk-free rate (^TNX): {e}. Using default {r_decimal*100:.2f}%.")
+    return float(r_decimal)
+
+# Author: Joshua Zayne
+# ==================
+# PLOT OPTION ANALYSIS
+# ==================
+# '''
+# Generates and displays a series of plots for Black-Scholes option analysis.
+# This includes plots for option price, Delta, Gamma, Vega, and Theta against a range of
+# underlying stock prices. Saves the generated plot as PNG and PDF.
+#
+# Parameters:
+# S_current (float): Current underlying asset price.
+# K (float): Option strike price.
+# T_days (int): Days to expiration.
+# r (float): Annualized risk-free interest rate.
+# sigma (float): Annualized volatility for the Black-Scholes model.
+# ticker_symbol (str): The stock ticker symbol for plot titles and filenames.
+# '''
+def plot_option_analysis(S_current, K, T_days, r, sigma, ticker_symbol):
+    T_years = T_days / 365.0
+
+    if S_current <= 0: S_current = 1e-6
+    S_range_min = max(1e-6, S_current * 0.5)
+    S_range_max = S_current * 1.5
+    if K > 0 :
+        S_range_min = min(S_range_min, K * 0.8 if K * 0.8 > 0 else 1e-6)
+        S_range_max = max(S_range_max, K * 1.2)
+    S_range = np.linspace(S_range_min, S_range_max, 100)
+    S_range = np.maximum(S_range, 1e-6)
+
+    try:
+        call_prices = np.array([black_scholes_call_put(s, K, T_years, r, sigma)[0] for s in S_range])
+        put_prices  = np.array([black_scholes_call_put(s, K, T_years, r, sigma)[1] for s in S_range])
+        call_deltas = np.array([delta(s, K, T_years, r, sigma, 'call') for s in S_range])
+        put_deltas  = np.array([delta(s, K, T_years, r, sigma, 'put') for s in S_range])
+        gammas      = np.array([gamma(s, K, T_years, r, sigma) for s in S_range])
+        vegas       = np.array([vega(s, K, T_years, r, sigma) for s in S_range])
+        call_thetas = np.array([theta(s, K, T_years, r, sigma, 'call') for s in S_range])
+        put_thetas  = np.array([theta(s, K, T_years, r, sigma, 'put') for s in S_range])
+    except Exception as e:
+        print(f"Error during B-S calculation for plots: {e}")
+        nan_array = np.full_like(S_range, np.nan)
+        call_prices, put_prices, call_deltas, put_deltas, gammas, vegas, call_thetas, put_thetas = [nan_array] * 8
+
+    try:
+        plt.style.use('seaborn-v0_8-whitegrid')
+    except Exception as e:
+        print(f"Warning: Matplotlib style 'seaborn-v0_8-whitegrid' not found ({e}). Using default style.")
+
+    fig, axs = plt.subplots(3, 2, figsize=(15, 18))
+    title_str = (f'Black-Scholes Option Analysis for {ticker_symbol}\n'
+                 f'S0: {S_current:.2f}, Strike (K): {K:.2f}, Days to Exp: {T_days}\n'
+                 f'Risk-Free (r): {r*100:.2f}%, BS Vol (σ): {sigma*100:.2f}%')
+    fig.suptitle(title_str, fontsize=14)
+
+    plots_config = [
+        (axs[0, 0], [call_prices, put_prices], ['Call Price', 'Put Price'], ['blue', 'red'], 'Option Price vs. Stock Price', 'Option Price'),
+        (axs[0, 1], [call_deltas, put_deltas], ['Call Delta', 'Put Delta'], ['blue', 'red'], 'Delta vs. Stock Price', 'Delta'),
+        (axs[1, 0], [gammas], ['Gamma (Call/Put)'], ['green'], 'Gamma vs. Stock Price', 'Gamma'),
+        (axs[1, 1], [vegas], ['Vega (Call/Put)'], ['purple'], 'Vega vs. Stock Price', 'Vega (per 1% change in vol)'),
+        (axs[2, 0], [call_thetas, put_thetas], ['Call Theta', 'Put Theta'], ['blue', 'red'], 'Theta vs. Stock Price', 'Theta (per day)')
+    ]
+
+    for ax, data_list, labels, colors, title, ylabel in plots_config:
+        for data_item, label, color in zip(data_list, labels, colors):
+            ax.plot(S_range, data_item, label=label, color=color)
+        ax.axvline(x=S_current, color='gray', linestyle='--', label=f'Current S0 ({S_current:.2f})')
+        ax.axvline(x=K, color='black', linestyle=':', label=f'Strike K ({K:.2f})')
+        ax.set_xlabel('Stock Price (S)')
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend()
+        ax.grid(True)
+
+    axs[2, 1].axis('off')
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    # --- SAVE THE FIGURE AS PNG AND PDF ---
+    try:
+        base_filename = f"{ticker_symbol}_BS_Greeks_K{int(K)}_T{T_days}d"
+        # Sanitize filename if K has decimals or ticker has special chars, though K is int here
+        base_filename = base_filename.replace('.', '_') # Example sanitization
+
+        png_filename = f"{base_filename}.png"
+        pdf_filename = f"{base_filename}.pdf"
+
+        fig.savefig(png_filename, dpi=300, bbox_inches='tight')
+        print(f"Saved Black-Scholes option analysis plot as {png_filename}")
+        fig.savefig(pdf_filename, bbox_inches='tight')
+        print(f"Saved Black-Scholes option analysis plot as {pdf_filename}")
+    except Exception as e:
+        print(f"Error saving Black-Scholes plot: {e}")
+    # --- END OF SAVE CODE ---
+
+    plt.show(block=False)
+
+# Author: Joshua Zayne
+# ==================
+# PLOT HISTORICAL TICKER ANALYSIS
+# ==================
+# '''
+# Generates and displays a plot of the historical stock price and its 30-day rolling
+# annualized volatility for a given ticker symbol and period.
+# Also plots the Black-Scholes input volatility as a reference line.
+# Saves the generated plot as PNG and PDF.
+#
+# Parameters:
+# ticker_symbol (str): The stock ticker symbol.
+# S_current_for_bs_vol (float): The current stock price used when calculating bs_volatility (for context in label).
+# bs_volatility (float): The annualized volatility used in the Black-Scholes model (for reference line).
+# '''
+def plot_historical_ticker_analysis(ticker_symbol, S_current_for_bs_vol, bs_volatility):
+    print(f"\n--- Historical Ticker Analysis for {ticker_symbol} ---")
+    valid_periods = ["1d","5d","1mo","3mo","6mo","1y","2y","5y","10y","ytd","max"]
+    period = input(f"Enter historical period (e.g., 3mo, 1y, ytd, max - valid: {', '.join(valid_periods)}): ").lower()
+
+    if period not in valid_periods:
+        print(f"Invalid period '{period}'. Skipping historical analysis.")
+        return
+
+    try:
+        stock = yf.Ticker(ticker_symbol)
+        hist_data = stock.history(period=period)
+
+        if hist_data.empty or 'Close' not in hist_data.columns or hist_data['Close'].dropna().empty:
+            print(f"No valid historical 'Close' price data found for {ticker_symbol} for period '{period}'.")
+            return
+
+        log_returns = np.log(hist_data['Close'] / hist_data['Close'].shift(1)).dropna()
+
+        rolling_vol = pd.Series(dtype=float) # Initialize as empty
+        if len(log_returns) >= 30 :
+            rolling_vol = log_returns.rolling(window=30).std() * np.sqrt(252)
+        else:
+            print(f"Not enough data points ({len(log_returns)}) after log returns to calculate 30-day rolling volatility. Need at least 30.")
+
+        fig, ax1 = plt.subplots(figsize=(12, 7))
+
+        try:
+            plt.style.use('seaborn-v0_8-whitegrid')
+        except Exception as e:
+            print(f"Warning: Matplotlib style 'seaborn-v0_8-whitegrid' not found ({e}). Using default style for historical plot.")
+
+        color_price = 'tab:blue'
+        ax1.set_xlabel('Date')
+        ax1.set_ylabel('Stock Price ($)', color=color_price)
+        ax1.plot(hist_data.index, hist_data['Close'], color=color_price, label=f'{ticker_symbol} Close Price')
+        ax1.tick_params(axis='y', labelcolor=color_price)
+        ax1.grid(True, axis='y', linestyle=':', alpha=0.7)
+
+        ax2 = ax1.twinx()
+        color_vol = 'tab:red'
+        ax2.set_ylabel('30-Day Rolling Annualized Volatility (%)', color=color_vol)
+
+        if not rolling_vol.dropna().empty: # Check if there's any non-NaN data to plot
+            ax2.plot(rolling_vol.index, rolling_vol * 100, color=color_vol, linestyle='--', label='30D Rolling Volatility')
+
+        ax2.axhline(y=bs_volatility * 100, color='gray', linestyle=':',
+                    label=f'B-S Input Vol ({bs_volatility*100:.2f}%)')
+        ax2.tick_params(axis='y', labelcolor=color_vol)
+
+        fig.suptitle(f'Historical Price & 30-Day Rolling Volatility for {ticker_symbol} ({period.upper()})', fontsize=16)
+
+        lines, labels = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+
+        all_lines = lines + lines2
+        all_labels = labels + labels2
+        if all_lines:
+            fig.legend(all_lines, all_labels, loc="upper center", bbox_to_anchor=(0.5, 0.95), ncol=len(all_lines))
+
+        fig.tight_layout(rect=[0, 0.03, 1, 0.90])
+
+        # --- SAVE THE FIGURE AS PNG AND PDF ---
+        try:
+            base_filename = f"{ticker_symbol}_historical_vol_analysis_{period.upper()}"
+            # Sanitize filename if ticker has special chars
+            base_filename = "".join(c if c.isalnum() or c in ['_', '-'] else '_' for c in base_filename)
+
+
+            png_filename = f"{base_filename}.png"
+            pdf_filename = f"{base_filename}.pdf"
+
+            fig.savefig(png_filename, dpi=300, bbox_inches='tight')
+            print(f"Saved historical analysis plot as {png_filename}")
+            fig.savefig(pdf_filename, bbox_inches='tight')
+            print(f"Saved historical analysis plot as {pdf_filename}")
+        except Exception as e:
+            print(f"Error saving historical plot: {e}")
+        # --- END OF SAVE CODE ---
+
+        plt.show()
+
+    except Exception as e:
+        print(f"Error during historical analysis for {ticker_symbol}: {e}")
+        import traceback
+        traceback.print_exc()
+
+# Author: Joshua Zayne
+# ==================
+# MAIN EXECUTION BLOCK
+# ==================
+# '''
+# This is the main entry point of my script.
+# It prompts the user for option parameters (ticker, strike, expiration),
+# fetches necessary market data (stock price, volatility, risk-free rate),
+# allows for custom overrides of volatility and risk-free rate,
+# calculates Black-Scholes option prices,
+# displays the option analysis plots (Greeks),
+# and optionally displays historical price and rolling volatility plots.
+# Includes error handling for user inputs and data fetching.
+# '''
+if __name__ == "__main__":
+    print("Welcome to the Basic Black-Scholes Option Modeler!")
+    # Author: Joshua Zayne (within __main__)
+    try:
+        ticker_symbol = input("Enter the stock ticker (e.g., AAPL, MSFT, GOOGL): ").upper()
+        # Sanitize ticker symbol for use in filenames
+        safe_ticker_symbol = "".join(c if c.isalnum() else '_' for c in ticker_symbol)
+
+
+        strike_price_K = float(input("Enter the strike price (K): "))
+        if strike_price_K <= 0: strike_price_K = abs(strike_price_K) if abs(strike_price_K) > 0 else 0.01
+
+        days_to_expiration_T = int(input("Enter the days to expiration (T): "))
+        if days_to_expiration_T < 0: days_to_expiration_T = 0
+
+        print(f"\nFetching data for {ticker_symbol}...")
+        S0, sigma_hist = get_stock_data(ticker_symbol)
+        print(f"Fetched Current Stock Price (S0): {S0:.2f}")
+        print(f"Calculated 1-Year Historical Volatility: {sigma_hist*100:.2f}%")
+
+        custom_vol_choice = input(f"Use custom volatility? (y/n, default n uses historical: {sigma_hist*100:.2f}%): ").lower()
+        sigma_param = sigma_hist # Default to historical
+        if custom_vol_choice == 'y':
+            sigma_param_input = float(input(f"Enter custom annualized volatility (e.g., 0.20 for 20%): "))
+            sigma_param = abs(sigma_param_input) if sigma_param_input >=0 else sigma_hist
+
+        if sigma_param <= 0:
+            print(f"Warning: Volatility for B-S model is {sigma_param*100:.2f}%. This can lead to unusual results.")
+            use_default_vol = input("Use a default volatility of 20% instead? (y/n): ").lower()
+            if use_default_vol == 'y': sigma_param = 0.20
+            elif sigma_param <= 0 : sigma_param = 0.0001
+
+        print(f"\nFetching risk-free rate (default from ^TNX)...")
+        r_fetched = get_risk_free_rate()
+        print(f"Fetched Risk-Free Rate (^TNX): {r_fetched*100:.2f}%")
+
+        custom_r_choice = input(f"Use custom risk-free rate? (y/n, default n uses fetched: {r_fetched*100:.2f}%): ").lower()
+        r_param = r_fetched # Default to fetched
+        if custom_r_choice == 'y':
+            r_param = float(input(f"Enter custom annualized risk-free rate (e.g., 0.05 for 5%): "))
+
+        print(f"\n--- Parameters for Black-Scholes Model ({ticker_symbol}) ---")
+        print(f"Current Stock Price (S0): {S0:.2f}")
+        print(f"Strike Price (K): {strike_price_K:.2f}")
+        print(f"Days to Expiration (T): {days_to_expiration_T}")
+        print(f"Annualized Volatility for B-S (σ): {sigma_param*100:.2f}%")
+        print(f"Annualized Risk-Free Rate (r): {r_param*100:.2f}%")
+
+        T_years_param = days_to_expiration_T / 365.0
+        current_call_price, current_put_price = black_scholes_call_put(S0, strike_price_K, T_years_param, r_param, sigma_param)
+        print(f"\n--- Calculated Option Prices (at S0={S0:.2f}) ---")
+        print(f"Call Option Price: {current_call_price:.2f}")
+        print(f"Put Option Price: {current_put_price:.2f}")
+
+        # Pass the sanitized ticker for filenames if needed, or use original ticker_symbol
+        plot_option_analysis(S0, strike_price_K, days_to_expiration_T, r_param, sigma_param, safe_ticker_symbol)
+
+        hist_analysis_choice = input("\nDo you want to see historical price and rolling volatility analysis for this ticker? (y/n): ").lower()
+        if hist_analysis_choice == 'y':
+            # Pass the sanitized ticker for filenames if needed
+            plot_historical_ticker_analysis(safe_ticker_symbol, S0, sigma_param)
+        else:
+            # If no historical plot, and B-S plot was non-blocking, this plt.show() might be redundant
+            # or could refer to the B-S plot. Consider if it's needed or if B-S plot should be blocking
+            # when it's the only plot.
+            # For now, keeping it, as plt.show() on an already shown non-blocking plot does little.
+            # If B-S was the only plot and hist_choice='n', the B-S plot might close quickly.
+            # A simple solution is to make plot_option_analysis's plt.show() blocking if it's the last plot.
+            # However, for simplicity, the current structure is okay.
+            # If you want the B-S plot to stay open if it's the only one:
+            # you could change plot_option_analysis to accept a block_plot=True argument
+            # and set it based on hist_analysis_choice.
+            # For now, this simple plt.show() will attempt to show any pending figures.
+             plt.show()
+
+
+    except ValueError as ve:
+        print(f"\nInput Error: {ve}")
+    except Exception as e:
+        print(f"\nAn unexpected error occurred: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        print("\nExiting Black-Scholes Modeler.")
