@@ -1,83 +1,80 @@
-# Introduction
-Getting to know me and my work
+# Hey, I'm Josh Zayne 👋
 
-# 👋 Hi, I'm Joshua Aleczavier Tiberius Zayne
+I spent six years in the Navy and Air Force as a behavioral health technician, then audited $75M in federal programs at the VA. Now I build systematic trading strategies and risk models as Head of Multi-Asset Strategies at Dimaskus Capital.
 
-Welcome to my GitHub!  
-I'm a quantitative finance professional and data scientist driven by curiosity, discipline, and a passion for impactful problem-solving. Whether it's optimizing multi-asset portfolios, building cutting-edge risk models, or translating complex analytics into actionable insights, I thrive at the intersection of numbers, code, and strategy.
+That path might seem random, but the throughline is the same: **finding signal in noise**—whether that's in a patient's chart, a federal budget, or overnight futures data.
 
 ---
 
-## 🧠 About Me
+## 🔬 Featured Projects
 
-- 🎓 **Education**:  
-  - **Masters of Finance** (2024-2025), University of Utah, David Eccles School of Business  
-  - **B.S. Quantitative Analysis** (2022-2024), University of Utah  
-  - **B.S. Applied Mathematics** (2018-2024), University of Utah
+### [Options Pricing & Greeks Analysis](./AAPL_BS_Greeks_K200_T14d.pdf)
+Built a Black-Scholes pricing engine with full Greeks visualization (Delta, Gamma, Theta, Vega, Rho) for AAPL options. Includes sensitivity analysis across strike prices and time to expiration.
 
-- 💼 **Professional Experience**:  
-  - **Head of Multi-Asset Strategies, Futures & Equity Division** at Dimaskus Capital Management  
-  - **Commodity Futures & Equity VP** at Dimaskus Capital Management  
-  - **Equity Trading Associate** at Dimaskus Capital Management  
-  - **Financial Pricing & FP&A Analyst** at Innovative Labs  
-  - **Federal Auditor & Program Analyst** at U.S. Department of Veterans Affairs  
-  - **Lead Petty Officer | Behavioral Health** at U.S. Navy & Air Force
-
-- 🚀 **What I Do Best**:
-  - Systematic investment strategy design & risk modeling
-  - Quantitative analytics & econometrics (Python, STATA, VBA)
-  - Portfolio optimization, multi-factor models, and simulation engines
-  - Data-driven financial planning, pricing solutions, and forecasting
-  - Building and leading high-impact teams and cross-functional projects
+![Greeks Visualization](./AAPL_BS_Greeks_K200_T14d.png)
 
 ---
 
-## 🛠️ Technical Skills
+### [Historical Volatility Analysis](./AAPL_historical_vol_analysis_1Y.pdf)
+Developed a volatility modeling framework comparing rolling realized volatility against implied vol surfaces. Used for identifying mean-reversion opportunities in options markets.
 
-- **Programming & Data Science**:  
-  Python (Pandas, NumPy, Matplotlib), STATA, Excel VBA, SATA, Data Visualization, Workflow Automation
-
-- **Quantitative & Financial Modeling**:  
-  Regression, Time-Series (ARIMA, GARCH, DiD), Monte Carlo Simulations, CAPM, Black-Scholes, Option Pricing, Portfolio Optimization
-
-- **Analytics & Operations**:  
-  Dashboarding (Power BI), Statistical Backtesting, Risk Metrics (VaR, CVaR), Scenario Analysis, Forecasting
-
-- **Leadership**:  
-  Strategic Planning, Team Management, Mentorship, Compliance & Audit, Crisis Decision-Making
+![Volatility Analysis](./AAPL_historical_vol_analysis_1Y.png)
 
 ---
 
-## 📈 Recent Projects & Highlights
+### [Econometric Alpha Signals](./Econometric%20Alpha%20Signal%20Part%201)
+Two-part research project building systematic alpha signals using econometric methods. Covers factor construction, backtesting methodology, and out-of-sample validation.
 
-- 💡 Developed a Markov-chain Monte Carlo engine simulating 500,000+ price paths nightly for advanced portfolio risk analysis.
-- ⚡ Built an end-to-end pricing engine in Python, automating 50k+ daily records, boosting pricing efficiency by 37%.
-- 🏛️ Created real-time dashboards for $75M federal spend audits, reducing manual review by 70% and enhancing compliance.
-- 🏆 Championed process improvements in healthcare operations, achieving a 98% reduction in medication errors.
+📄 [Part 1](./Econometric%20Alpha%20Signal%20Part%201) | [Part 2](./Econometric%20Alpha%20Signal%20Part%202page%2012_18.pdf)
 
 ---
 
-## 📚 Coursework & Specialties
-
-- **Quantitative Analysis & Econometrics**: Econometrics, Time Series, Causality, Quantitative Risk, Panel Data
-- **Financial Modeling**: CAPM, Derivatives, Portfolio Optimization, Structured Products
-- **Mathematics & Analytics**: Stochastic Processes, Measure Theory, PDEs, Numerical Methods
-- **Programming**: Python for Data Science, Machine Learning, Excel VBA, Data Structures & Algorithms
+### [Centralized vs. Decentralized Banking: A Difference-in-Differences Study](./DiD%20on%20centeralized%20vs%20de-centeralized%20banking%20practices.pdf)
+Applied causal inference techniques (DiD) to analyze structural differences in banking practices. Demonstrates econometric rigor beyond typical quant finance work.
 
 ---
 
-## 🌎 Beyond the Numbers
+## 🛠️ What I Build
 
-- 🏞️ **Outdoor Enthusiast**: Night hiker, archery competitor, cycling & ATV/ UTV adventurist with my family.
-- 🏓 **Family-Focused**: Yearly international vacation planner, ping pong games with my kids, and always up for a new adventure.
-
----
-
-## 📫 Let's Connect!
-
-- [LinkedIn](https://www.linkedin.com/in/joshuazayne)
-- 📧 Joshua.a.zayne@hotmail.com
+| Domain | Tools |
+|--------|-------|
+| **Quant Modeling** | Monte Carlo (500k+ paths/night), GARCH, ARIMA, Black-Scholes, Multi-factor models |
+| **Programming** | Python (Pandas, NumPy, SciPy), STATA, VBA, SQL |
+| **Infrastructure** | InfluxDB pipelines, REST/WebSocket APIs, real-time data systems |
+| **Risk** | VaR, CVaR, scenario analysis, portfolio optimization |
 
 ---
 
-> “Analytics is the art of turning data into decisions. I'm here to build, innovate, and lead—one model at a time.”
+## 🚀 Recent Work
+
+- **Monte Carlo Risk Engine** — Simulates 500,000+ price paths nightly for multi-asset portfolio stress testing
+- **Automated Pricing Pipeline** — Python engine processing 50k+ records daily, cut pricing cycle time by 37%
+- **Federal Audit Dashboards** — Real-time monitoring for $75M in VA program spend, reduced manual review by 70%
+- **Futures Trading Infrastructure** — Building IronBeam API integration with InfluxDB for systematic futures strategies
+
+---
+
+## 📚 Background
+
+**Education**
+- M.S. Finance — University of Utah, David Eccles School of Business (2025)
+- B.S. Quantitative Analysis — University of Utah (2024)
+- B.S. Applied Mathematics — University of Utah (2024)
+
+**Experience**
+- Head of Multi-Asset Strategies, Futures & Equity — Dimaskus Capital
+- Federal Auditor & Program Analyst — U.S. Department of Veterans Affairs
+- Lead Petty Officer, Behavioral Health — U.S. Navy & Air Force
+
+---
+
+## 🌲 Outside the Terminal
+
+Night hiker. Archery competitor. ATV adventurer. Yearly international trip planner with my kids. Always down for ping pong.
+
+---
+
+## 📫 Let's Connect
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/joshuazayne)
+[![Email](https://img.shields.io/badge/Email-D14836?style=flat&logo=gmail&logoColor=white)](mailto:Joshua.a.zayne@hotmail.com)
