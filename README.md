@@ -2,11 +2,13 @@
 
 I spent nine years across the Navy and Air Force as a behavioral health technician, and psychometrician. then audited $75M in federal programs at the VA. Now I build systematic trading strategies and risk models as **Head of Multi-Asset Strategies** at Dimaskus Capital.
 
-That path might seem random, but the throughline is the same: **finding signal in noise**—whether that's in a patient's chart, a federal budget, or overnight futures data.
+That path might seem random, but the throughline is the same: **finding signal in noise**—whether that's in a patient's chart, a federal budget, or overnight futures data. 
+
+My examples below are purposely simple in nature as I am behind an NDA, but I would be more than happy to discuss or showcase these skills off of any datasets you give me, or ask me to data mine for you, Please feel free to ask me any questions you might have. I look forward to our discussion.
 
 ---
 
-## 🔥 Featured Work
+## Featured Work
 
 ### Portfolio Optimization Toolkit
 > **Full implementation of Modern Portfolio Theory with interactive CLI**
